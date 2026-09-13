@@ -1,1035 +1,1031 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GPS Fußball-Challenge – Blankenhagen Spieleentwicklung</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow-x: hidden;
-            font-family: system-ui, -apple-system, sans-serif; 
-            background: #0f1a12; 
-            color: white; 
-            text-align: center;
-        }
-
-        body {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        header {
-            background: #142818;
-            padding: 8px 10px;
-            border-bottom: 2px solid #00ff66;
-            flex-shrink: 0;
-        }
-        header h2 {
-            font-size: clamp(14px, 3.5vw, 18px);
-            color: #00ff66;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        header p {
-            font-size: clamp(10px, 2.2vw, 12px);
-            color: #8fbc94;
-            font-weight: bold;
-        }
-
-        .screen { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            flex: 1;
-            padding: 10px; 
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        #gameScreen, #cameraScreen, #success { display: none; }
-
-        button { 
-            padding: 12px 20px; 
-            font-size: clamp(14px, 3.5vw, 16px); 
-            margin: 8px; 
-            cursor: pointer; 
-            background: #ffffff; 
-            border: none; 
-            font-weight: bold; 
-            color: #142818; 
-            border-radius: 6px;
-            touch-action: manipulation;
-        }
-
-        button:disabled {
-            background: #444 !important;
-            color: #888 !important;
-            cursor: not-allowed;
-            border: 1px solid #555;
-        }
-
-        .station-badge {
-            background: rgba(0, 255, 102, 0.15);
-            border: 1px solid #00ff66;
-            color: #00ff66;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 6px;
-        }
-
-        .scoreboard {
-            background: #142818;
-            border: 1px solid #8fbc94;
-            border-radius: 8px;
-            padding: 6px 14px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            max-width: 320px;
-            font-size: 13px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        .team-name {
-            font-weight: bold;
-            color: #d0e1d4;
-            max-width: 100px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .score-nums {
-            font-size: 16px;
-            font-weight: bold;
-            color: #00ff66;
-            background: #0f1a12;
-            padding: 2px 8px;
-            border-radius: 4px;
-            border: 1px solid #2e5936;
-            letter-spacing: 2px;
-        }
-
-        #radar { 
-            width: min(65vw, 42vh, 240px); 
-            height: min(65vw, 42vh, 240px); 
-            border-radius: 50%; 
-            border: 2px solid #00ff66; 
-            position: relative; 
-            margin: 5px auto; 
-            overflow: hidden; 
-            background: radial-gradient(circle, #19331f 0%, #0f1a12 80%); 
-            flex-shrink: 0;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
-        }
-        #sweep, #sweepGlow { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; pointer-events: none; }
-        #sweep { background: conic-gradient(from 0deg, rgba(0,255,102,0.4), transparent 60deg); }
-        
-        #target { 
-            width: 16px; 
-            height: 16px; 
-            background: #ffffff; 
-            border-radius: 50%; 
-            position: absolute; 
-            transform: translate(-50%, -50%); 
-            top: 50%; 
-            left: 50%; 
-            box-shadow: 0 0 12px #00ff66, 0 0 24px #00ff66; 
-            opacity: 0; 
-            transition: opacity 0.8s ease-out; 
-        }
-        
-        .camera-container {
-            position: relative;
-            width: 100%;
-            max-width: 350px;
-            height: 250px;
-            margin: 5px auto;
-            overflow: hidden;
-            border-radius: 8px;
-            border: 2px solid #00ff66;
-        }
-
-        video { 
+<!DOCTYPE html> 
+<html lang="de"> 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <title>GPS Fußball-Challenge – Blankenhagen Spieleentwicklung</title> 
+    <style> 
+        * { box-sizing: border-box; margin: 0; padding: 0; } 
+         
+        html, body { 
             width: 100%; 
             height: 100%; 
-            background: #222; 
-            object-fit: cover; 
-        }
-
-        .camera-overlay {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            border: 1px solid #00ff66;
-            border-radius: 8px;
-            padding: 4px 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: bold;
-            font-size: 13px;
-            color: #00ff66;
-            z-index: 10;
-        }
-
-        #arObject {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 160px;
-            height: 95px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            transition: width 0.3s ease-out, height 0.3s ease-out, opacity 0.3s ease-out;
-            animation: floatAnim 2.5s ease-in-out infinite alternate;
-            z-index: 5;
-            border-top: 7px solid #ffffff;
-            border-left: 7px solid #ffffff;
-            border-right: 7px solid #ffffff;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-            background-color: rgba(0, 0, 0, 0.85);
-            background-image: 
-                linear-gradient(135deg, rgba(255,255,255,0.15) 25%, transparent 25%), 
-                linear-gradient(225deg, rgba(255,255,255,0.15) 25%, transparent 25%), 
-                linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%), 
-                linear-gradient(315deg, rgba(255,255,255,0.15) 25%, transparent 25%);
-            background-position: 10px 0, 10px 0, 0 0, 0 0;
-            background-size: 20px 20px;
-            background-repeat: repeat;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.95);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #arObject::after {
-            content: "⚽";
-            font-size: 38px;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
-        }
-
-        @keyframes floatAnim {
-            0% { transform: translate(-50%, -55%) scale(1); }
-            100% { transform: translate(-50%, -45%) scale(1.08); }
-        }
-
-        .shooting {
-            animation: shootAnim 1.2s forwards !important;
-        }
-
-        @keyframes shootAnim {
-            0% {
-                transform: translate(-50%, -50%) rotate(0deg) scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: translate(-50%, -200%) rotate(360deg) scale(1.3);
-                opacity: 0.8;
-                filter: drop-shadow(0 0 35px #ff3333);
-            }
-            100% {
-                transform: translate(-50%, -400%) rotate(720deg) scale(0);
-                opacity: 0;
-            }
-        }
-
-        #cameraArrow {
-            font-size: 18px;
-            display: inline-block;
-            transition: transform 0.2s ease-out;
-        }
-        
-        .control-panel { 
-            background: #19331f; 
-            border: 1px solid #8fbc94; 
-            padding: 10px 12px; 
-            border-radius: 8px; 
-            margin-bottom: 8px; 
+            overflow-x: hidden; 
+            font-family: system-ui, -apple-system, sans-serif;  
+            background: #0f1a12;  
+            color: white;  
+            text-align: center; 
+        } 
+ 
+        body { 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+        } 
+ 
+        header { 
+            background: #142818; 
+            padding: 8px 10px; 
+            border-bottom: 2px solid #00ff66; 
+            flex-shrink: 0; 
+        } 
+        header h2 { 
+            font-size: clamp(14px, 3.5vw, 18px); 
+            color: #00ff66; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+        } 
+        header p { 
+            font-size: clamp(10px, 2.2vw, 12px); 
+            color: #8fbc94; 
+            font-weight: bold; 
+        } 
+ 
+        .screen {  
+            display: flex;  
+            flex-direction: column;  
+            align-items: center;  
+            justify-content: center;  
+            flex: 1; 
+            padding: 10px;  
             width: 100%; 
-            font-size: 13px;
-        }
-
-        .radius-selector {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 6px;
-        }
-
-        .radius-btn {
-            background: #142818;
-            color: #fff;
-            border: 1px solid #8fbc94;
-            padding: 6px 12px;
-            font-size: 13px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 0;
-        }
-
-        .radius-btn.active {
-            background: #ffffff;
-            color: #142818;
-            border-color: #ffffff;
-            font-weight: bold;
-        }
-
-        .team-input {
-            width: 100%;
-            padding: 8px;
-            background: #142818;
-            border: 1px solid #8fbc94;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 4px;
-            text-align: center;
-            margin-top: 4px;
-            outline: none;
-        }
-        .team-input:focus {
-            border-color: #00ff66;
-        }
-        
-        .info-text { font-size: clamp(12px, 2.8vw, 14px); margin: 2px 0; }
-
-        .impressum-link {
-            font-size: 12px;
-            color: #8fbc94;
-            text-decoration: underline;
-            cursor: pointer;
-            margin-top: 6px;
-            display: inline-block;
-        }
-        .impressum-link:hover {
-            color: #00ff66;
-        }
-
-        #impressumModal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 100;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .modal-content {
-            background: #142818;
-            border: 2px solid #00ff66;
-            border-radius: 8px;
-            padding: 20px;
-            max-width: 420px;
-            width: 100%;
-            text-align: left;
-            font-size: 13px;
-            line-height: 1.5;
-            color: #d0e1d4;
-            max-height: 85vh;
-            overflow-y: auto;
-        }
-        .modal-content h3 {
-            color: #00ff66;
-            font-size: 14px;
-            margin-top: 12px;
-            margin-bottom: 4px;
-            border-bottom: 1px solid #2e5936;
-            padding-bottom: 2px;
-        }
-        .modal-content h3:first-of-type {
-            margin-top: 0;
-        }
-        .modal-close {
-            background: #ffffff;
-            color: #142818;
-            border: none;
-            padding: 10px 20px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            display: block;
-            margin: 20px auto 0 auto;
-        }
-    </style>
-</head>
-<body>
-
-    <header>
-        <h2>Blankenhagen Spieleentwicklung</h2>
-        <p>GPS Fußball-Challenge – Prototyp</p>
-    </header>
-
-    <!-- START-BILDSCHIRM -->
-    <div id="startScreen" class="screen">
-        <h1 style="font-size: clamp(18px, 4vw, 22px); margin-bottom: 6px; color: #ffffff;">⚽ FUSSBALL-CHALLENGE 🥅</h1>
-        
-        <div class="control-panel" style="max-width: 340px;">
-            <strong style="color: #ffffff; font-size: 13px;">🏆 TEAM / VEREIN:</strong>
-            <input type="text" id="teamNameInput" class="team-input" value="TV Weiler/Rems" maxlength="20">
-        </div>
-
-        <div class="control-panel" style="max-width: 340px;">
-            <strong style="color: #ffffff; font-size: 13px;">🎯 AKTIONS-RADIUS WÄHLEN:</strong>
-            <div class="radius-selector">
-                <button type="button" class="radius-btn" onclick="setPlayRadius(20)">Hobby (20m)</button>
-                <button type="button" class="radius-btn active" onclick="setPlayRadius(50)">Amateur (50m)</button>
-                <button type="button" class="radius-btn" onclick="setPlayRadius(100)">Profi (100m)</button>
-            </div>
-        </div>
-
-        <div class="control-panel" style="max-width: 340px; font-size: 11px; color: #d0e1d4; line-height: 1.3;">
-            <span>ℹ️ 15m Treffer-Radius & 2-Minuten-Zeitlimit pro Tor.</span><br>
-            <span style="color: #ff6666; display: block; margin-top: 3px;">⚠️ Verpasst du die Zeit, schießt der Gast ein Tor!</span><br>
-            <strong style="color: #ffffff; display: block; margin-top: 4px;">Fair Play: Bitte achtet auf den Straßenverkehr!</strong>
-        </div>
-
-        <button id="startButton" style="background: #ffffff; color: #142818; margin-top: 4px;">SPIEL STARTEN</button>
-        
-        <span class="impressum-link" onclick="openImpressum()">Impressum & Rechtliches</span>
-    </div>
-
-    <!-- SPIEL-BILDSCHIRM -->
-    <div id="gameScreen" class="screen">
-        <div id="stationBadge" class="station-badge">STATION 1 VON 5</div>
-        
-        <div class="scoreboard">
-            <span id="displayTeamHome" class="team-name">TV Weiler/Rems</span>
-            <span id="scoreDisplayGame" class="score-nums">0 : 0</span>
-            <span class="team-name">Gast</span>
-        </div>
-
-        <div id="status" style="font-weight: bold; color: #00ff66; font-size: 15px; margin-bottom: 2px;">🔎 TOR SUCHEN</div>
-        <div id="escapeTimerText" style="font-size: 12px; color: #8fbc94; margin-bottom: 4px;">Zeitlimit: 02:00</div>
-        
-        <div id="radar">
-            <div id="sweep"></div>
-            <div id="sweepGlow"></div>
-            <div id="target"></div>
-        </div>
-
-        <div class="info-text">Entfernung: <span id="distance" style="font-weight: bold; color: #00ff66;">-</span> m</div>
-        <div class="info-text" id="accuracy">GPS-Genauigkeit: -</div>
-        <div class="info-text" id="bearing">Zielrichtung: -</div>
-        
-        <button id="cameraToggleButton" style="background: #ffffff; color: #142818; margin-top: 6px;">📷 AR-KAMERA ANSCHALTEN</button>
-    </div>
-
-    <!-- KAMERA-BILDSCHIRM -->
-    <div id="cameraScreen" class="screen">
-        <div id="cameraStationBadge" class="station-badge">STATION 1 VON 5</div>
-
-        <div class="scoreboard">
-            <span id="displayTeamHomeCam" class="team-name">TV Weiler/Rems</span>
-            <span id="scoreDisplayCamera" class="score-nums">0 : 0</span>
-            <span class="team-name">Gast</span>
-        </div>
-
-        <h3 id="cameraHeaderTitle" style="color: #00ff66; margin-bottom: 2px; font-size: 15px;">📷 GROßTOR-ZIELSUCHE</h3>
-        <div id="cameraTimerText" style="font-size: 12px; color: #8fbc94; margin-bottom: 4px;">Zeitlimit: 02:00</div>
-        
-        <div class="camera-container">
-            <video id="camera" autoplay playsinline muted></video>
-            
-            <div class="camera-overlay">
-                <span id="cameraArrow">⬆️</span>
-                <span id="cameraDistText">-- m</span>
-            </div>
-
-            <!-- Weiß-schwarzes Tor -->
-            <div id="arObject"></div>
-        </div>
-
-        <div style="margin-top: 4px;">
-            <button id="cameraOffButton" style="background: #142818; color: #fff; border: 1px solid #fff;">📷 RADAR</button>
-            <button id="foundButton" disabled style="background: #ff3333; color: #ffffff;">⚽ EINSCHIESSEN</button>
-        </div>
-    </div>
-
-    <!-- ERFOLGS-BILDSCHIRM -->
-    <div id="success" class="screen">
-        <h1 style="color: #ffffff; font-size: clamp(20px, 5vw, 26px); margin-bottom: 10px;">⚽ SPIELENDE 🏆</h1>
-        <div id="finalScoreBox" class="scoreboard" style="max-width: 320px; margin: 15px auto; font-size: 16px;">
-            <span id="displayTeamHomeFinal" class="team-name">TV Weiler/Rems</span>
-            <span id="scoreDisplayFinal" class="score-nums">0 : 0</span>
-            <span class="team-name">Gast</span>
-        </div>
-        <p id="finalMessage" style="margin-bottom: 15px; font-size: 14px; line-height: 1.5; color: #d0e1d4;"></p>
-        <button id="again" style="background: #ffffff; color: #142818;">NEUES SPIEL STARTEN</button>
-    </div>
-
-    <!-- IMPRESSUM MODAL POPUP -->
-    <div id="impressumModal">
-        <div class="modal-content">
-            <h3>1. Haftungsausschluss</h3>
-            <p>Die Nutzung erfolgt auf eigene Verantwortung. Bitte auf Umgebung und Verkehr achten.</p>
-
-            <h3>2. Datenschutz</h3>
-            <p>Diese WebApp speichert keine personenbezogenen Daten. Standortdaten werden nicht dauerhaft gespeichert.</p>
-
-            <h3>3. Nutzungsbedingungen</h3>
-            <p>Das Spiel dient der Unterhaltung. Keine Garantie auf Sensor- oder GPS-Genauigkeit. Nutzung auf eigene Gefahr.</p>
-
-            <h3>4. Impressum</h3>
-            <p>
-                <strong>Blankenhagen Spieleentwicklung</strong><br>
-                73614 Schorndorf<br>
-                E-Mail: spieleentwicklung@freenet.de
-            </p>
-
-            <h3>Hinweis für Veranstalter</h3>
-            <p>Der Veranstalter (z. B. Verein) ist verantwortlich für die sichere Durchführung des Spiels.</p>
-
-            <button class="modal-close" onclick="closeImpressum()">Schließen</button>
-        </div>
-    </div>
-
-<script>
-let waypoints = [];
-let currentIndex = 0;
-const TOTAL_STATIONS = 5;
-const TARGET_RADIUS = 15; 
-let selectedPlayRadius = 50; 
-let RADAR_RANGE = 100; 
-const ESCAPE_TIME_SECONDS = 120; 
-
-let timeLeft = ESCAPE_TIME_SECONDS;
-let escapeTimerInterval = null;
-
-let scoreHome = 0; 
-let scoreAway = 0; 
-let currentTeamName = "TV Weiler/Rems";
-
-let latitude = null; 
-let longitude = null;
-let gpsWatchId = null;
-let accuracy = 0;      
-let targetBearing = 0;
-let heading = 0;
-let cameraStream = null;
-let isCameraActive = false;
-let isShooting = false;
-
-let sweepAngle = 0;
-let radarAnimation = null;
-let targetAngleRelative = 0;
-let hasPinged = false;
-
-let audioCtx = null;
-
-function openImpressum() {
-    document.getElementById('impressumModal').style.display = 'flex';
-}
-function closeImpressum() {
-    document.getElementById('impressumModal').style.display = 'none';
-}
-
-function setPlayRadius(meters) {
-    selectedPlayRadius = meters;
-    RADAR_RANGE = Math.max(100, meters * 2);
-    
-    const buttons = document.querySelectorAll('.radius-btn');
-    buttons.forEach(btn => {
-        btn.classList.remove('active');
-        if(btn.textContent.includes(meters + 'm')) {
-            btn.classList.add('active');
-        }
-    });
-}
-
-function updateScoreboardUI() {
-    const scoreStr = scoreHome + " : " + scoreAway;
-    document.getElementById('scoreDisplayGame').textContent = scoreStr;
-    document.getElementById('scoreDisplayCamera').textContent = scoreStr;
-    
-    document.getElementById('displayTeamHome').textContent = currentTeamName;
-    document.getElementById('displayTeamHomeCam').textContent = currentTeamName;
-    document.getElementById('displayTeamHomeFinal').textContent = currentTeamName;
-}
-
-function playSonarPing() {
-    try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === "suspended") audioCtx.resume();
-
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.8);
-    } catch (e) { console.log("Audio blockiert."); }
-}
-
-function playCheerSound() {
-    try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === "suspended") audioCtx.resume();
-
-        const notes = [523.25, 659.25, 783.99, 1046.50];
-        notes.forEach((freq, index) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            
-            osc.type = index === notes.length - 1 ? "triangle" : "square";
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + (index * 0.12));
-            
-            gain.gain.setValueAtTime(0.2, audioCtx.currentTime + (index * 0.12));
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (index * 0.12) + 0.4);
-            
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            osc.start(audioCtx.currentTime + (index * 0.12));
-            osc.stop(audioCtx.currentTime + (index * 0.12) + 0.4);
-        });
-    } catch (e) { console.log("Jubel-Audio blockiert."); }
-}
-
-function playConcedeSound() {
-    try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === "suspended") audioCtx.resume();
-
-        const frequencies = [220, 196, 164.81, 130.81]; 
-        frequencies.forEach((freq, index) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            
-            osc.type = "sawtooth";
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + (index * 0.15));
-            
-            gain.gain.setValueAtTime(0.25, audioCtx.currentTime + (index * 0.15));
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (index * 0.15) + 0.35);
-            
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            osc.start(audioCtx.currentTime + (index * 0.15));
-            osc.stop(audioCtx.currentTime + (index * 0.15) + 0.35);
-        });
-    } catch (e) { console.log("Gegentor-Audio blockiert."); }
-}
-
-const startScreen = document.getElementById("startScreen");
-const gameScreen = document.getElementById("gameScreen");
-const cameraScreen = document.getElementById("cameraScreen");
-const success = document.getElementById("success");
-
-const startButton = document.getElementById("startButton");
-const cameraToggleButton = document.getElementById("cameraToggleButton");
-const cameraOffButton = document.getElementById("cameraOffButton");
-const foundButton = document.getElementById("foundButton");
-const againButton = document.getElementById("again");
-
-const status = document.getElementById("status");
-const escapeTimerText = document.getElementById("escapeTimerText");
-const cameraTimerText = document.getElementById("cameraTimerText");
-const distanceOutput = document.getElementById("distance");
-const accuracyOutput = document.getElementById("accuracy");
-const bearingOutput = document.getElementById("bearing");
-const stationBadge = document.getElementById("stationBadge");
-const cameraStationBadge = document.getElementById("cameraStationBadge");
-
-const cameraHeaderTitle = document.getElementById("cameraHeaderTitle");
-const cameraArrow = document.getElementById("cameraArrow");
-const cameraDistText = document.getElementById("cameraDistText");
-const arObject = document.getElementById("arObject");
-
-const target = document.getElementById("target");
-const radar = document.getElementById("radar");
-const sweep = document.getElementById("sweep");
-const sweepGlow = document.getElementById("sweepGlow");
-const camera = document.getElementById("camera");
-
-function generateTestWaypoints(userLat, userLon) {
-    waypoints = [];
-    const metersPerDegree = 111000;
-    
-    for (let i = 0; i < TOTAL_STATIONS; i++) {
-        const randomAngle = Math.random() * 2 * Math.PI;
-        const randomDist = 15 + Math.random() * (selectedPlayRadius - 15);
-        
-        const dn = Math.sin(randomAngle) * randomDist;
-        const de = Math.cos(randomAngle) * randomDist;
-
-        const latOffset = dn / metersPerDegree;
-        const lonOffset = de / (metersPerDegree * Math.cos(userLat * Math.PI / 180));
-        
-        waypoints.push({
-            id: i + 1,
-            lat: userLat + latOffset,
-            lon: userLon + lonOffset
-        });
-    }
-    currentIndex = 0;
-}
-
-function handleTimeOutByAwayTeam() {
-    scoreAway++; 
-    updateScoreboardUI();
-    playConcedeSound(); 
-    alert("⌛ Zeit abgelaufen! Der Gast (Computer) hat ein Tor erzielt! ⚽🤖");
-    advanceToNextStation();
-}
-
-function startEscapeTimer() {
-    if (escapeTimerInterval) clearInterval(escapeTimerInterval);
-    timeLeft = ESCAPE_TIME_SECONDS;
-
-    escapeTimerInterval = setInterval(() => {
-        timeLeft--;
-        
-        let mins = Math.floor(timeLeft / 60);
-        let secs = timeLeft % 60;
-        let timeStr = "Zeitlimit: " + (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
-        
-        escapeTimerText.textContent = timeStr;
-        cameraTimerText.textContent = timeStr;
-
-        if (timeLeft <= 0) {
-            clearInterval(escapeTimerInterval);
-            handleTimeOutByAwayTeam();
-        }
-    }, 1000);
-}
-
-startButton.addEventListener("click", async () => {
-    const inputVal = document.getElementById("teamNameInput").value.trim();
-    if (inputVal !== "") {
-        currentTeamName = inputVal;
-    }
-    scoreHome = 0;
-    scoreAway = 0;
-    updateScoreboardUI();
-
-    // iOS 13+ Berechtigungsabfrage für den Kompass initial anstoßen
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        try {
-            await DeviceOrientationEvent.requestPermission();
-        } catch (e) {
-            console.log("Kompass-Berechtigung abgelehnt oder nicht erteilt.");
-        }
-    }
-
-    startGame();
-});
-
-function startGame(){
-    if (gpsWatchId !== null) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        gpsWatchId = null;
-    }
-
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    if ("geolocation" in navigator) {
-        gpsWatchId = navigator.geolocation.watchPosition(
-            (pos) => {
-                latitude = pos.coords.latitude;
-                longitude = pos.coords.longitude;
-                accuracy = Math.round(pos.coords.accuracy);
-                
-                if (waypoints.length === 0) {
-                    generateTestWaypoints(latitude, longitude);
-                    startScreen.style.display = "none";
-                    gameScreen.style.display = "flex";
-                    startRadar();
-                    startEscapeTimer();
-                }
-                updateGame();
-            },
-            (err) => { alert("GPS konnte nicht abgerufen werden. Bitte Standort freigeben."); },
-            { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
-        );
-    }
-
-    if (window.DeviceOrientationEvent) {
-        window.addEventListener("deviceorientation", (e) => {
-            if (e.webkitCompassHeading) heading = e.webkitCompassHeading;
-            else if (e.alpha) heading = 360 - e.alpha;
-            updateRadar();
-            updateCameraOverlay();
-        }, true);
-    }
-}
-
-function updateGame(){
-    if(latitude === null || longitude === null || waypoints.length === 0) return;
-
-    const currentTarget = waypoints[currentIndex];
-    const distance = calculateDistance(latitude, longitude, currentTarget.lat, currentTarget.lon);
-    targetBearing = calculateBearing(latitude, longitude, currentTarget.lat, currentTarget.lon);
-
-    const distRounded = Math.round(distance);
-    distanceOutput.textContent = distRounded;
-    accuracyOutput.textContent = "GPS-Genauigkeit: ±" + accuracy + " m";
-    bearingOutput.textContent = "Zielrichtung: " + Math.round(targetBearing) + "°";
-    
-    const badgeText = `STATION ${currentIndex + 1} VON ${TOTAL_STATIONS}`;
-    stationBadge.textContent = badgeText;
-    cameraStationBadge.textContent = badgeText;
-
-    if(distance <= TARGET_RADIUS){
-        status.textContent = "🎯 TOR IN REICHWEITE!";
-        status.style.color = "#ff3333";
-    } else {
-        status.textContent = "🔎 TOR SUCHEN";
-        status.style.color = "#ffffff";
-    }
-
-    updateRadar();
-    updateCameraOverlay();
-}
-
-function updateRadar(){
-    if(latitude === null || longitude === null || waypoints.length === 0) return;
-
-    const currentTarget = waypoints[currentIndex];
-    const distance = calculateDistance(latitude, longitude, currentTarget.lat, currentTarget.lon);
-    const size = radar.clientWidth;
-    const center = size / 2;
-
-    let radius = (distance / RADAR_RANGE) * center;
-    radius = Math.min(radius, center - 10);
-
-    targetAngleRelative = normalize(targetBearing - heading);
-    const radians = targetAngleRelative * Math.PI / 180;
-
-    target.style.left = (center + Math.sin(radians) * radius) + "px";
-    target.style.top = (center - Math.cos(radians) * radius) + "px";
-}
-
-function updateCameraOverlay() {
-    if (!isCameraActive || latitude === null || longitude === null || waypoints.length === 0 || isShooting) return;
-
-    const currentTarget = waypoints[currentIndex];
-    const distance = calculateDistance(latitude, longitude, currentTarget.lat, currentTarget.lon);
-    const distRounded = Math.round(distance);
-
-    targetAngleRelative = normalize(targetBearing - heading);
-    cameraArrow.style.transform = `rotate(${targetAngleRelative}deg)`;
-    cameraDistText.textContent = distRounded + " m";
-
-    if (distance <= TARGET_RADIUS) {
-        cameraHeaderTitle.textContent = "🎯 JETZT SCHIESSEN!";
-        cameraHeaderTitle.style.color = "#ff3333";
-        arObject.style.opacity = "1";
-        arObject.style.width = "200px";
-        arObject.style.height = "120px";
-        
-        foundButton.disabled = false;
-        foundButton.style.background = "#ff3333"; 
-        foundButton.style.color = "#ffffff";
-    } else {
-        foundButton.disabled = true;
-        foundButton.style.background = "#444";
-        
-        if (distance <= 30) {
-            cameraHeaderTitle.textContent = "📷 NÄHER HERANGEHEN!";
-            cameraHeaderTitle.style.color = "#8fbc94";
-            arObject.style.opacity = "0.75";
-            arObject.style.width = "150px";
-            arObject.style.height = "90px";
-        } else {
-            cameraHeaderTitle.textContent = "📷 ZU WEIT ENTFERNT";
-            cameraHeaderTitle.style.color = "#8fbc94";
-            arObject.style.opacity = "0.4";
-            arObject.style.width = "110px";
-            arObject.style.height = "65px";
-        }
-    }
-}
-
-function startRadar(){
-    if(radarAnimation !== null){
-        cancelAnimationFrame(radarAnimation);
-        radarAnimation = null;
-    }
-
-    function animate(){
-        sweepAngle += 2.08;
-        if(sweepAngle >= 360) sweepAngle = 0;
-
-        sweep.style.transform = "rotate(" + sweepAngle + "deg)";
-        sweepGlow.style.transform = "rotate(" + sweepAngle + "deg)";
-
-        let angleDiff = Math.abs(sweepAngle - targetAngleRelative);
-        if (angleDiff > 180) angleDiff = 360 - angleDiff;
-
-        if (angleDiff < 12) {
-            target.style.opacity = "1";
-            if (!hasPinged) {
-                playSonarPing();
-                hasPinged = true;
-            }
-        } else {
-            target.style.opacity = "0";
-            if (angleDiff > 30) hasPinged = false;
-        }
-
-        radarAnimation = requestAnimationFrame(animate);
-    }
-    animate();
-}
-
-cameraToggleButton.addEventListener("click", toggleCamera);
-cameraOffButton.addEventListener("click", toggleCamera);
-
-async function toggleCamera(){
-    if (!isCameraActive) {
-        try {
-            try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { exact: "environment" } },
-                    audio: false
-                });
-            } catch (err) {
-                cameraStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" },
-                    audio: false
-                });
-            }
-            
-            camera.srcObject = cameraStream;
-            isCameraActive = true;
-            
-            gameScreen.style.display = "none";
-            cameraScreen.style.display = "flex";
-            updateCameraOverlay();
-        } catch(error) {
-            alert("Kamera-Fehler: " + error.message + "\nBitte Kamera-Berechtigung erteilen.");
-        }
-    } else {
-        stopCamera();
-        isCameraActive = false;
-        cameraScreen.style.display = "none";
-        gameScreen.style.display = "flex";
-    }
-}
-
-function stopCamera(){
-    if(cameraStream){
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-    }
-}
-
-foundButton.addEventListener("click", () => {
-    if (isShooting) return;
-    isShooting = true;
-    foundButton.disabled = true;
-
-    arObject.classList.add("shooting");
-    playCheerSound();
-
-    setTimeout(() => {
-        arObject.classList.remove("shooting");
-        scoreHome++;
-        updateScoreboardUI();
-        isShooting = false;
-        stopCamera();
-        isCameraActive = false;
-        cameraScreen.style.display = "none";
-        
-        advanceToNextStation();
-    }, 1200);
-});
-
-function advanceToNextStation() {
-    if (escapeTimerInterval) clearInterval(escapeTimerInterval);
-    currentIndex++;
-
-    if (currentIndex < TOTAL_STATIONS) {
-        alert("⚽ Tor erzielt! Weiter zur nächsten Station!");
-        gameScreen.style.display = "flex";
-        startEscapeTimer();
-        updateGame();
-    } else {
-        showEndScreen();
-    }
-}
-
-function showEndScreen() {
-    gameScreen.style.display = "none";
-    cameraScreen.style.display = "none";
-    success.style.display = "flex";
-
-    const finalScoreStr = scoreHome + " : " + scoreAway;
-    document.getElementById("scoreDisplayFinal").textContent = finalScoreStr;
-
-    let msg = "";
-    if (scoreHome > scoreAway) {
-        msg = `🏆 Herzlichen Glückwunsch! ${currentTeamName} gewinnt das Match mit ${scoreHome}:${scoreAway} gegen den Gast! Stark gekämpft!`;
-    } else if (scoreHome < scoreAway) {
-        msg = `🏁 Schlusspfiff! Der Gast gewinnt mit ${scoreAway}:${scoreHome}. Nächstes Mal holt sich ${currentTeamName} den Sieg!`;
-    } else {
-        msg = `🤝 Unentschieden (${scoreHome}:${scoreAway})! Ein packendes Duell auf Augenhöhe zwischen ${currentTeamName} und dem Gast!`;
-    }
-    document.getElementById("finalMessage").textContent = msg;
-}
-
-againButton.addEventListener("click", () => {
-    success.style.display = "none";
-    startScreen.style.display = "flex";
-    waypoints = [];
-    currentIndex = 0;
-    scoreHome = 0;
-    scoreAway = 0;
-    if (gpsWatchId !== null) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        gpsWatchId = null;
-    }
-});
-
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3;
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c;
-}
-
-function calculateBearing(lat1, lon1, lat2, lon2) {
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = let = lat2 * Math.PI / 180; // Korrekturvariablen-Fix
-    const φ2_fixed = lat2 * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const y = Math.sin(Δλ) * Math.cos(φ2_fixed);
-    const x = Math.cos(φ1) * Math.sin(φ2_fixed) -
-              Math.sin(φ1) * Math.cos(φ2_fixed) * Math.cos(Δλ);
-    let θ = Math.atan2(y, x);
-    θ = θ * 180 / Math.PI;
-    return (θ + 360) % 360;
-}
-
-function normalize(deg) {
-    return (deg + 540) % 360 - 180;
-}
-</script>
-
-</body>
+            max-width: 500px; 
+            margin: 0 auto; 
+        } 
+        #gameScreen, #cameraScreen, #success { display: none; } 
+ 
+        button {  
+            padding: 12px 20px;  
+            font-size: clamp(14px, 3.5vw, 16px);  
+            margin: 8px;  
+            cursor: pointer;  
+            background: #ffffff;  
+            border: none;  
+            font-weight: bold;  
+            color: #142818;  
+            border-radius: 6px; 
+            touch-action: manipulation; 
+        } 
+ 
+        button:disabled { 
+            background: #444 !important; 
+            color: #888 !important; 
+            cursor: not-allowed; 
+            border: 1px solid #555; 
+        } 
+ 
+        .station-badge { 
+            background: rgba(0, 255, 102, 0.15); 
+            border: 1px solid #00ff66; 
+            color: #00ff66; 
+            padding: 4px 12px; 
+            border-radius: 12px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            margin-bottom: 6px; 
+        } 
+ 
+        .scoreboard { 
+            background: #142818; 
+            border: 1px solid #8fbc94; 
+            border-radius: 8px; 
+            padding: 6px 14px; 
+            margin-bottom: 8px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            width: 100%; 
+            max-width: 320px; 
+            font-size: 13px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3); 
+        } 
+        .team-name { 
+            font-weight: bold; 
+            color: #d0e1d4; 
+            max-width: 100px; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        } 
+        .score-nums { 
+            font-size: 16px; 
+            font-weight: bold; 
+            color: #00ff66; 
+            background: #0f1a12; 
+            padding: 2px 8px; 
+            border-radius: 4px; 
+            border: 1px solid #2e5936; 
+            letter-spacing: 2px; 
+        } 
+ 
+        #radar {  
+            width: min(65vw, 42vh, 240px);  
+            height: min(65vw, 42vh, 240px);  
+            border-radius: 50%;  
+            border: 2px solid #00ff66;  
+            position: relative;  
+            margin: 5px auto;  
+            overflow: hidden;  
+            background: radial-gradient(circle, #19331f 0%, #0f1a12 80%);  
+            flex-shrink: 0; 
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.6); 
+        } 
+        #sweep, #sweepGlow { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; pointer-events: none; } 
+        #sweep { background: conic-gradient(from 0deg, rgba(0,255,102,0.4), transparent 60deg); } 
+         
+        #target {  
+            width: 16px;  
+            height: 16px;  
+            background: #ffffff;  
+            border-radius: 50%;  
+            position: absolute;  
+            transform: translate(-50%, -50%);  
+            top: 50%;  
+            left: 50%;  
+            box-shadow: 0 0 12px #00ff66, 0 0 24px #00ff66;  
+            opacity: 0;  
+            transition: opacity 0.8s ease-out;  
+        } 
+         
+        .camera-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 350px; 
+            height: 250px; 
+            margin: 5px auto; 
+            overflow: hidden; 
+            border-radius: 8px; 
+            border: 2px solid #00ff66; 
+        } 
+ 
+        video {  
+            width: 100%;  
+            height: 100%;  
+            background: #222;  
+            object-fit: cover;  
+        } 
+ 
+        .camera-overlay { 
+            position: absolute; 
+            top: 10px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: rgba(0, 0, 0, 0.7); 
+            border: 1px solid #00ff66; 
+            border-radius: 8px; 
+            padding: 4px 12px; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            font-weight: bold; 
+            font-size: 13px; 
+            color: #00ff66; 
+            z-index: 10; 
+        } 
+ 
+        #arObject { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            width: 160px; 
+            height: 95px; 
+            transform: translate(-50%, -50%); 
+            pointer-events: none; 
+            transition: width 0.3s ease-out, height 0.3s ease-out, opacity 0.3s ease-out; 
+            animation: floatAnim 2.5s ease-in-out infinite alternate; 
+            z-index: 5; 
+            border-top: 7px solid #ffffff; 
+            border-left: 7px solid #ffffff; 
+            border-right: 7px solid #ffffff; 
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2); 
+            background-color: rgba(0, 0, 0, 0.85); 
+            background-image:  
+                linear-gradient(135deg, rgba(255,255,255,0.15) 25%, transparent 25%),  
+                linear-gradient(225deg, rgba(255,255,255,0.15) 25%, transparent 25%),  
+                linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%),  
+                linear-gradient(315deg, rgba(255,255,255,0.15) 25%, transparent 25%); 
+            background-position: 10px 0, 10px 0, 0 0, 0 0; 
+            background-size: 20px 20px; 
+            background-repeat: repeat; 
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.95); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        } 
+ 
+        #arObject::after { 
+            content: "⚽"; 
+            font-size: 38px; 
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); 
+        } 
+ 
+        @keyframes floatAnim { 
+            0% { transform: translate(-50%, -55%) scale(1); } 
+            100% { transform: translate(-50%, -45%) scale(1.08); } 
+        } 
+ 
+        .shooting { 
+            animation: shootAnim 1.2s forwards !important; 
+        } 
+ 
+        @keyframes shootAnim { 
+            0% { 
+                transform: translate(-50%, -50%) rotate(0deg) scale(1); 
+                opacity: 1; 
+            } 
+            50% { 
+                transform: translate(-50%, -200%) rotate(360deg) scale(1.3); 
+                opacity: 0.8; 
+                filter: drop-shadow(0 0 35px #ff3333); 
+            } 
+            100% { 
+                transform: translate(-50%, -400%) rotate(720deg) scale(0); 
+                opacity: 0; 
+            } 
+        } 
+ 
+        #cameraArrow { 
+            font-size: 18px; 
+            display: inline-block; 
+            transition: transform 0.2s ease-out; 
+        } 
+         
+        .control-panel {  
+            background: #19331f;  
+            border: 1px solid #8fbc94;  
+            padding: 10px 12px;  
+            border-radius: 8px;  
+            margin-bottom: 8px;  
+            width: 100%;  
+            font-size: 13px; 
+        } 
+ 
+        .radius-selector { 
+            display: flex; 
+            justify-content: center; 
+            gap: 8px; 
+            margin-top: 6px; 
+        } 
+ 
+        .radius-btn { 
+            background: #142818; 
+            color: #fff; 
+            border: 1px solid #8fbc94; 
+            padding: 6px 12px; 
+            font-size: 13px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 0; 
+        } 
+ 
+        .radius-btn.active { 
+            background: #ffffff; 
+            color: #142818; 
+            border-color: #ffffff; 
+            font-weight: bold; 
+        } 
+ 
+        .team-input { 
+            width: 100%; 
+            padding: 8px; 
+            background: #142818; 
+            border: 1px solid #8fbc94; 
+            color: white; 
+            font-size: 14px; 
+            font-weight: bold; 
+            border-radius: 4px; 
+            text-align: center; 
+            margin-top: 4px; 
+            outline: none; 
+        } 
+        .team-input:focus { 
+            border-color: #00ff66; 
+        } 
+         
+        .info-text { font-size: clamp(12px, 2.8vw, 14px); margin: 2px 0; } 
+ 
+        .impressum-link { 
+            font-size: 12px; 
+            color: #8fbc94; 
+            text-decoration: underline; 
+            cursor: pointer; 
+            margin-top: 6px; 
+            display: inline-block; 
+        } 
+        .impressum-link:hover { 
+            color: #00ff66; 
+        } 
+ 
+        #impressumModal { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); 
+            z-index: 100; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px; 
+        } 
+        .modal-content { 
+            background: #142818; 
+            border: 2px solid #00ff66; 
+            border-radius: 8px; 
+            padding: 20px; 
+            max-width: 420px; 
+            width: 100%; 
+            text-align: left; 
+            font-size: 13px; 
+            line-height: 1.5; 
+            color: #d0e1d4; 
+            max-height: 85vh; 
+            overflow-y: auto; 
+        } 
+        .modal-content h3 { 
+            color: #00ff66; 
+            font-size: 14px; 
+            margin-top: 12px; 
+            margin-bottom: 4px; 
+            border-bottom: 1px solid #2e5936; 
+            padding-bottom: 2px; 
+        } 
+        .modal-content h3:first-of-type { 
+            margin-top: 0; 
+        } 
+        .modal-close { 
+            background: #ffffff; 
+            color: #142818; 
+            border: none; 
+            padding: 10px 20px; 
+            font-weight: bold; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            display: block; 
+            margin: 20px auto 0 auto; 
+        } 
+    </style> 
+</head> 
+<body> 
+ 
+    <header> 
+        <h2>Blankenhagen Spieleentwicklung</h2> 
+        <p>GPS Fußball-Challenge – Prototyp</p> 
+    </header> 
+ 
+    <div id="startScreen" class="screen"> 
+        <h1 style="font-size: clamp(18px, 4vw, 22px); margin-bottom: 6px; color: #ffffff;">⚽ FUSSBALL-CHALLENGE 🥅</h1> 
+         
+        <div class="control-panel" style="max-width: 340px;"> 
+            <strong style="color: #ffffff; font-size: 13px;">🏆 TEAM / VEREIN:</strong> 
+            <input type="text" id="teamNameInput" class="team-input" value="TV Weiler/Rems" maxlength="20"> 
+        </div> 
+ 
+        <div class="control-panel" style="max-width: 340px;"> 
+            <strong style="color: #ffffff; font-size: 13px;">🎯 AKTIONS-RADIUS WÄHLEN:</strong> 
+            <div class="radius-selector"> 
+                <button type="button" class="radius-btn" onclick="setPlayRadius(20)">Hobby (20m)</button> 
+                <button type="button" class="radius-btn active" onclick="setPlayRadius(50)">Amateur (50m)</button> 
+                <button type="button" class="radius-btn" onclick="setPlayRadius(100)">Profi (100m)</button> 
+            </div> 
+        </div> 
+ 
+        <div class="control-panel" style="max-width: 340px; font-size: 11px; color: #d0e1d4; line-height: 1.3;"> 
+            <span>ℹ️ 15m Treffer-Radius & 2-Minuten-Zeitlimit pro Tor.</span><br> 
+            <span style="color: #ff6666; display: block; margin-top: 3px;">⚠️ Verpasst du die Zeit, schießt der Gast ein Tor!</span><br> 
+            <strong style="color: #ffffff; display: block; margin-top: 4px;">Fair Play: Bitte achtet auf den Straßenverkehr!</strong> 
+        </div> 
+ 
+        <button id="startButton" style="background: #ffffff; color: #142818; margin-top: 4px;">SPIEL STARTEN</button> 
+         
+        <span class="impressum-link" onclick="openImpressum()">Impressum & Rechtliches</span> 
+    </div> 
+ 
+    <div id="gameScreen" class="screen"> 
+        <div id="stationBadge" class="station-badge">STATION 1 VON 5</div> 
+         
+        <div class="scoreboard"> 
+            <span id="displayTeamHome" class="team-name">TV Weiler/Rems</span> 
+            <span id="scoreDisplayGame" class="score-nums">0 : 0</span> 
+            <span class="team-name">Gast</span> 
+        </div> 
+ 
+        <div id="status" style="font-weight: bold; color: #00ff66; font-size: 15px; margin-bottom: 2px;">🔎 TOR SUCHEN</div> 
+        <div id="escapeTimerText" style="font-size: 12px; color: #8fbc94; margin-bottom: 4px;">Zeitlimit: 02:00</div> 
+         
+        <div id="radar"> 
+            <div id="sweep"></div> 
+            <div id="sweepGlow"></div> 
+            <div id="target"></div> 
+        </div> 
+ 
+        <div class="info-text">Entfernung: <span id="distance" style="font-weight: bold; color: #00ff66;">-</span> m</div> 
+        <div class="info-text" id="accuracy">GPS-Genauigkeit: -</div> 
+        <div class="info-text" id="bearing">Zielrichtung: -</div> 
+         
+        <button id="cameraToggleButton" style="background: #ffffff; color: #142818; margin-top: 6px;">📷 AR-KAMERA ANSCHALTEN</button> 
+    </div> 
+ 
+    <div id="cameraScreen" class="screen"> 
+        <div id="cameraStationBadge" class="station-badge">STATION 1 VON 5</div> 
+ 
+        <div class="scoreboard"> 
+            <span id="displayTeamHomeCam" class="team-name">TV Weiler/Rems</span> 
+            <span id="scoreDisplayCamera" class="score-nums">0 : 0</span> 
+            <span class="team-name">Gast</span> 
+        </div> 
+ 
+        <h3 id="cameraHeaderTitle" style="color: #00ff66; margin-bottom: 2px; font-size: 15px;">📷 GROßTOR-ZIELSUCHE</h3> 
+        <div id="cameraTimerText" style="font-size: 12px; color: #8fbc94; margin-bottom: 4px;">Zeitlimit: 02:00</div> 
+         
+        <div class="camera-container"> 
+            <video id="camera" autoplay playsinline muted></video> 
+             
+            <div class="camera-overlay"> 
+                <span id="cameraArrow">⬆️</span> 
+                <span id="cameraDistText">-- m</span> 
+            </div> 
+ 
+            <div id="arObject"></div> 
+        </div> 
+ 
+        <div style="margin-top: 4px;"> 
+            <button id="cameraOffButton" style="background: #142818; color: #fff; border: 1px solid #fff;">📷 RADAR</button> 
+            <button id="foundButton" disabled style="background: #ff3333; color: #ffffff;">⚽ EINSCHIESSEN</button> 
+        </div> 
+    </div> 
+ 
+    <div id="success" class="screen"> 
+        <h1 style="color: #ffffff; font-size: clamp(20px, 5vw, 26px); margin-bottom: 10px;">⚽ SPIELENDE 🏆</h1> 
+        <div id="finalScoreBox" class="scoreboard" style="max-width: 320px; margin: 15px auto; font-size: 16px;"> 
+            <span id="displayTeamHomeFinal" class="team-name">TV Weiler/Rems</span> 
+            <span id="scoreDisplayFinal" class="score-nums">0 : 0</span> 
+            <span class="team-name">Gast</span> 
+        </div> 
+        <p id="finalMessage" style="margin-bottom: 15px; font-size: 14px; line-height: 1.5; color: #d0e1d4;"></p> 
+        <button id="again" style="background: #ffffff; color: #142818;">NEUES SPIEL STARTEN</button> 
+    </div> 
+ 
+    <div id="impressumModal"> 
+        <div class="modal-content"> 
+            <h3>1. Haftungsausschluss</h3> 
+            <p>Die Nutzung erfolgt auf eigene Verantwortung. Bitte auf Umgebung und Verkehr achten.</p> 
+ 
+            <h3>2. Datenschutz</h3> 
+            <p>Diese WebApp speichert keine personenbezogenen Daten. Standortdaten werden nicht dauerhaft gespeichert.</p> 
+ 
+            <h3>3. Nutzungsbedingungen</h3> 
+            <p>Das Spiel dient der Unterhaltung. Keine Garantie auf Sensor- oder GPS-Genauigkeit. Nutzung auf eigene Gefahr.</p> 
+ 
+            <h3>4. Impressum</h3> 
+            <p> 
+                <strong>Blankenhagen Spieleentwicklung</strong><br> 
+                73614 Schorndorf<br> 
+                E-Mail: spieleentwicklung@freenet.de 
+            </p> 
+ 
+            <h3>Hinweis für Veranstalter</h3> 
+            <p>Der Veranstalter (z. B. Verein) ist verantwortlich für die sichere Durchführung des Spiels.</p> 
+ 
+            <button class="modal-close" onclick="closeImpressum()">Schließen</button> 
+        </div> 
+    </div> 
+ 
+<script> 
+let waypoints = []; 
+let currentIndex = 0; 
+const TOTAL_STATIONS = 5; 
+const TARGET_RADIUS = 15;  
+let selectedPlayRadius = 50;  
+let RADAR_RANGE = 100;  
+const ESCAPE_TIME_SECONDS = 120;  
+ 
+let timeLeft = ESCAPE_TIME_SECONDS; 
+let escapeTimerInterval = null; 
+ 
+let scoreHome = 0;  
+let scoreAway = 0;  
+let currentTeamName = "TV Weiler/Rems"; 
+ 
+let latitude = null;  
+let longitude = null; 
+let gpsWatchId = null; 
+let accuracy = 0;       
+let targetBearing = 0; 
+let heading = 0; 
+let cameraStream = null; 
+let isCameraActive = false; 
+let isShooting = false; 
+ 
+let sweepAngle = 0; 
+let radarAnimation = null; 
+let targetAngleRelative = 0; 
+let hasPinged = false; 
+ 
+let audioCtx = null; 
+ 
+function openImpressum() { 
+    document.getElementById('impressumModal').style.display = 'flex'; 
+} 
+function closeImpressum() { 
+    document.getElementById('impressumModal').style.display = 'none'; 
+} 
+ 
+function setPlayRadius(meters) { 
+    selectedPlayRadius = meters; 
+    RADAR_RANGE = Math.max(100, meters * 2); 
+     
+    const buttons = document.querySelectorAll('.radius-btn'); 
+    buttons.forEach(btn => { 
+        btn.classList.remove('active'); 
+        if(btn.textContent.includes(meters + 'm')) { 
+            btn.classList.add('active'); 
+        } 
+    }); 
+} 
+ 
+function updateScoreboardUI() { 
+    const scoreStr = scoreHome + " : " + scoreAway; 
+    document.getElementById('scoreDisplayGame').textContent = scoreStr; 
+    document.getElementById('scoreDisplayCamera').textContent = scoreStr; 
+     
+    document.getElementById('displayTeamHome').textContent = currentTeamName; 
+    document.getElementById('displayTeamHomeCam').textContent = currentTeamName; 
+    document.getElementById('displayTeamHomeFinal').textContent = currentTeamName; 
+} 
+ 
+function playSonarPing() { 
+    try { 
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+        if (audioCtx.state === "suspended") audioCtx.resume(); 
+ 
+        const osc = audioCtx.createOscillator(); 
+        const gain = audioCtx.createGain(); 
+        osc.type = "sine"; 
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime); 
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8); 
+        osc.connect(gain); 
+        gain.connect(audioCtx.destination); 
+        osc.start(); 
+        osc.stop(audioCtx.currentTime + 0.8); 
+    } catch (e) { console.log("Audio blockiert."); } 
+} 
+ 
+function playCheerSound() { 
+    try { 
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+        if (audioCtx.state === "suspended") audioCtx.resume(); 
+ 
+        const notes = [523.25, 659.25, 783.99, 1046.50]; 
+        notes.forEach((freq, index) => { 
+            const osc = audioCtx.createOscillator(); 
+            const gain = audioCtx.createGain(); 
+             
+            osc.type = index === notes.length - 1 ? "triangle" : "square"; 
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + (index * 0.12)); 
+             
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime + (index * 0.12)); 
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (index * 0.12) + 0.4); 
+             
+            osc.connect(gain); 
+            gain.connect(audioCtx.destination); 
+             
+            osc.start(audioCtx.currentTime + (index * 0.12)); 
+            osc.stop(audioCtx.currentTime + (index * 0.12) + 0.4); 
+        }); 
+    } catch (e) { console.log("Jubel-Audio blockiert."); } 
+} 
+ 
+function playConcedeSound() { 
+    try { 
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+        if (audioCtx.state === "suspended") audioCtx.resume(); 
+ 
+        const frequencies = [220, 196, 164.81, 130.81];  
+        frequencies.forEach((freq, index) => { 
+            const osc = audioCtx.createOscillator(); 
+            const gain = audioCtx.createGain(); 
+             
+            osc.type = "sawtooth"; 
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + (index * 0.15)); 
+             
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime + (index * 0.15)); 
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + (index * 0.15) + 0.35); 
+             
+            osc.connect(gain); 
+            gain.connect(audioCtx.destination); 
+             
+            osc.start(audioCtx.currentTime + (index * 0.15)); 
+            osc.stop(audioCtx.currentTime + (index * 0.15) + 0.35); 
+        }); 
+    } catch (e) { console.log("Gegentor-Audio blockiert."); } 
+} 
+ 
+const startScreen = document.getElementById("startScreen"); 
+const gameScreen = document.getElementById("gameScreen"); 
+const cameraScreen = document.getElementById("cameraScreen"); 
+const success = document.getElementById("success"); 
+ 
+const startButton = document.getElementById("startButton"); 
+const cameraToggleButton = document.getElementById("cameraToggleButton"); 
+const cameraOffButton = document.getElementById("cameraOffButton"); 
+const foundButton = document.getElementById("foundButton"); 
+const againButton = document.getElementById("again"); 
+ 
+const status = document.getElementById("status"); 
+const escapeTimerText = document.getElementById("escapeTimerText"); 
+const cameraTimerText = document.getElementById("cameraTimerText"); 
+const distanceOutput = document.getElementById("distance"); 
+const accuracyOutput = document.getElementById("accuracy"); 
+const bearingOutput = document.getElementById("bearing"); 
+const stationBadge = document.getElementById("stationBadge"); 
+const cameraStationBadge = document.getElementById("cameraStationBadge"); 
+ 
+const cameraHeaderTitle = document.getElementById("cameraHeaderTitle"); 
+const cameraArrow = document.getElementById("cameraArrow"); 
+const cameraDistText = document.getElementById("cameraDistText"); 
+const arObject = document.getElementById("arObject"); 
+ 
+const target = document.getElementById("target"); 
+const radar = document.getElementById("radar"); 
+const sweep = document.getElementById("sweep"); 
+const sweepGlow = document.getElementById("sweepGlow"); 
+const camera = document.getElementById("camera"); 
+ 
+function generateTestWaypoints(userLat, userLon) { 
+    waypoints = []; 
+    const metersPerDegree = 111000; 
+     
+    for (let i = 0; i < TOTAL_STATIONS; i++) { 
+        const randomAngle = Math.random() * 2 * Math.PI; 
+        const randomDist = 15 + Math.random() * (selectedPlayRadius - 15); 
+         
+        const dn = Math.sin(randomAngle) * randomDist; 
+        const de = Math.cos(randomAngle) * randomDist; 
+ 
+        const latOffset = dn / metersPerDegree; 
+        const lonOffset = de / (metersPerDegree * Math.cos(userLat * Math.PI / 180)); 
+         
+        waypoints.push({ 
+            id: i + 1, 
+            lat: userLat + latOffset, 
+            lon: userLon + lonOffset 
+        }); 
+    } 
+    currentIndex = 0; 
+} 
+ 
+function handleTimeOutByAwayTeam() { 
+    scoreAway++;  
+    updateScoreboardUI(); 
+    playConcedeSound();  
+    advanceToNextStation(); 
+} 
+ 
+function startEscapeTimer() { 
+    if (escapeTimerInterval) clearInterval(escapeTimerInterval); 
+    timeLeft = ESCAPE_TIME_SECONDS; 
+ 
+    let mins = Math.floor(timeLeft / 60); 
+    let secs = timeLeft % 60; 
+    escapeTimerText.textContent = "Zeitlimit: " + (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs; 
+    cameraTimerText.textContent = escapeTimerText.textContent; 
+ 
+    escapeTimerInterval = setInterval(() => { 
+        timeLeft--; 
+         
+        let mins = Math.floor(timeLeft / 60); 
+        let secs = timeLeft % 60; 
+        let timeStr = "Zeitlimit: " + (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs; 
+         
+        escapeTimerText.textContent = timeStr; 
+        cameraTimerText.textContent = timeStr; 
+ 
+        if (timeLeft <= 0) { 
+            clearInterval(escapeTimerInterval); 
+            handleTimeOutByAwayTeam(); 
+        } 
+    }, 1000); 
+} 
+ 
+startButton.addEventListener("click", async () => { 
+    const inputVal = document.getElementById("teamNameInput").value.trim(); 
+    if (inputVal !== "") { 
+        currentTeamName = inputVal; 
+    } 
+    scoreHome = 0; 
+    scoreAway = 0; 
+    updateScoreboardUI(); 
+ 
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') { 
+        try { 
+            await DeviceOrientationEvent.requestPermission(); 
+        } catch (e) { 
+            console.log("Kompass-Berechtigung abgelehnt oder nicht erteilt."); 
+        } 
+    } 
+ 
+    startGame(); 
+}); 
+ 
+function startGame(){ 
+    if (gpsWatchId !== null) { 
+        navigator.geolocation.clearWatch(gpsWatchId); 
+        gpsWatchId = null; 
+    } 
+ 
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+ 
+    if ("geolocation" in navigator) { 
+        gpsWatchId = navigator.geolocation.watchPosition( 
+            (pos) => { 
+                latitude = pos.coords.latitude; 
+                longitude = pos.coords.longitude; 
+                accuracy = Math.round(pos.coords.accuracy); 
+                 
+                if (waypoints.length === 0) { 
+                    generateTestWaypoints(latitude, longitude); 
+                    startScreen.style.display = "none"; 
+                    gameScreen.style.display = "flex"; 
+                    startRadar(); 
+                    startEscapeTimer(); 
+                } 
+                updateGame(); 
+            }, 
+            (err) => { alert("GPS konnte nicht abgerufen werden. Bitte Standort freigeben."); }, 
+            { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 } 
+        ); 
+    } 
+ 
+    if (window.DeviceOrientationEvent) { 
+        window.addEventListener("deviceorientation", (e) => { 
+            if (e.webkitCompassHeading) heading = e.webkitCompassHeading; 
+            else if (e.alpha) heading = 360 - e.alpha; 
+            updateRadar(); 
+            updateCameraOverlay(); 
+        }, true); 
+    } 
+} 
+ 
+function updateGame(){ 
+    if(latitude === null || longitude === null || waypoints.length === 0) return; 
+ 
+    const currentTarget = waypoints[currentIndex]; 
+    const distance = calculateDistance(latitude, longitude, currentTarget.lat, currentTarget.lon); 
+    targetBearing = calculateBearing(latitude, longitude, currentTarget.lat, currentTarget.lon); 
+ 
+    const distRounded = Math.round(distance); 
+    distanceOutput.textContent = distRounded; 
+    accuracyOutput.textContent = "GPS-Genauigkeit: ±" + accuracy + " m"; 
+    bearingOutput.textContent = "Zielrichtung: " + Math.round(targetBearing) + "°"; 
+     
+    const badgeText = `STATION ${currentIndex + 1} VON ${TOTAL_STATIONS}`; 
+    stationBadge.textContent = badgeText; 
+    cameraStationBadge.textContent = badgeText; 
+ 
+    if(distance <= TARGET_RADIUS){ 
+        status.textContent = "🎯 TOR IN REICHWEITE!"; 
+        status.style.color = "#ff3333"; 
+    } else { 
+        status.textContent = "🔎 TOR SUCHEN"; 
+        status.style.color = "#ffffff"; 
+    } 
+ 
+    updateRadar(); 
+    updateCameraOverlay(); 
+} 
+ 
+function updateRadar(){ 
+    if(latitude === null || longitude === null || waypoints.length === 0) return; 
+ 
+    const currentTarget = waypoints[currentIndex]; 
+    const distance = calculateDistance(latitude, longitude, currentTarget.lat, currentTarget.lon); 
+    const size = radar.clientWidth; 
+    const center = size / 2; 
+ 
+    let radius = (distance / RADAR_RANGE) * center; 
+    radius = Math.min(radius, center - 10); 
+ 
+    targetAngleRelative = normalize(targetBearing - heading); 
+    const radians = targetAngleRelative * Math.PI / 180; 
+ 
+    target.style.left = (center + Math.sin(radians) * radius) + "px"; 
+    target.style.top = (center - Math.cos(radians) * radius) + "px"; 
+} 
+ 
+function updateCameraOverlay() { 
+    if (!isCameraActive || latitude === null || longitude === null || waypoints.length === 0 || isShooting) return; 
+ 
+    const currentTarget = waypoints[currentIndex]; 
+    const distance = calculateDistance(latitude, longitude, currentTarget.lat, currentTarget.lon); 
+    const distRounded = Math.round(distance); 
+ 
+    targetAngleRelative = normalize(targetBearing - heading); 
+    cameraArrow.style.transform = `rotate(${targetAngleRelative}deg)`; 
+    cameraDistText.textContent = distRounded + " m"; 
+ 
+    if (distance <= TARGET_RADIUS) { 
+        cameraHeaderTitle.textContent = "🎯 JETZT SCHIESSEN!"; 
+        cameraHeaderTitle.style.color = "#ff3333"; 
+        arObject.style.opacity = "1"; 
+        arObject.style.width = "200px"; 
+        arObject.style.height = "120px"; 
+         
+        foundButton.disabled = false; 
+        foundButton.style.background = "#ff3333";  
+        foundButton.style.color = "#ffffff"; 
+    } else { 
+        foundButton.disabled = true; 
+        foundButton.style.background = "#444"; 
+         
+        if (distance <= 30) { 
+            cameraHeaderTitle.textContent = "📷 NÄHER HERANGEHEN!"; 
+            cameraHeaderTitle.style.color = "#8fbc94"; 
+            arObject.style.opacity = "0.75"; 
+            arObject.style.width = "150px"; 
+            arObject.style.height = "90px"; 
+        } else { 
+            cameraHeaderTitle.textContent = "📷 ZU WEIT ENTFERNT"; 
+            cameraHeaderTitle.style.color = "#8fbc94"; 
+            arObject.style.opacity = "0.4"; 
+            arObject.style.width = "110px"; 
+            arObject.style.height = "65px"; 
+        } 
+    } 
+} 
+ 
+function startRadar(){ 
+    if(radarAnimation !== null){ 
+        cancelAnimationFrame(radarAnimation); 
+        radarAnimation = null; 
+    } 
+ 
+    function animate(){ 
+        sweepAngle += 2.08; 
+        if(sweepAngle >= 360) sweepAngle = 0; 
+ 
+        sweep.style.transform = "rotate(" + sweepAngle + "deg)"; 
+        sweepGlow.style.transform = "rotate(" + sweepAngle + "deg)"; 
+ 
+        let angleDiff = Math.abs(sweepAngle - targetAngleRelative); 
+        if (angleDiff > 180) angleDiff = 360 - angleDiff; 
+ 
+        if (angleDiff < 12) { 
+            target.style.opacity = "1"; 
+            if (!hasPinged) { 
+                playSonarPing(); 
+                hasPinged = true; 
+            } 
+        } else { 
+            target.style.opacity = "0"; 
+            if (angleDiff > 30) hasPinged = false; 
+        } 
+ 
+        radarAnimation = requestAnimationFrame(animate); 
+    } 
+    animate(); 
+} 
+ 
+cameraToggleButton.addEventListener("click", toggleCamera); 
+cameraOffButton.addEventListener("click", toggleCamera); 
+ 
+async function toggleCamera(){ 
+    if (!isCameraActive) { 
+        try { 
+            try { 
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: { exact: "environment" } }, 
+                    audio: false 
+                }); 
+            } catch (err) { 
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" }, 
+                    audio: false 
+                }); 
+            } 
+             
+            camera.srcObject = cameraStream; 
+            isCameraActive = true; 
+             
+            gameScreen.style.display = "none"; 
+            cameraScreen.style.display = "flex"; 
+            updateCameraOverlay(); 
+        } catch(error) { 
+            alert("Kamera-Fehler: " + error.message + "\nBitte Kamera-Berechtigung erteilen."); 
+        } 
+    } else { 
+        stopCamera(); 
+        isCameraActive = false; 
+        cameraScreen.style.display = "none"; 
+        gameScreen.style.display = "flex"; 
+    } 
+} 
+ 
+function stopCamera(){ 
+    if(cameraStream){ 
+        cameraStream.getTracks().forEach(track => track.stop()); 
+        cameraStream = null; 
+    } 
+} 
+ 
+foundButton.addEventListener("click", () => { 
+    if (isShooting) return; 
+    isShooting = true; 
+    foundButton.disabled = true; 
+ 
+    arObject.classList.add("shooting"); 
+    playCheerSound(); 
+ 
+    setTimeout(() => { 
+        arObject.classList.remove("shooting"); 
+        scoreHome++; 
+        updateScoreboardUI(); 
+        isShooting = false; 
+        stopCamera(); 
+        isCameraActive = false; 
+        cameraScreen.style.display = "none"; 
+         
+        advanceToNextStation(); 
+    }, 1200); 
+}); 
+ 
+function advanceToNextStation() { 
+    if (escapeTimerInterval) clearInterval(escapeTimerInterval); 
+    currentIndex++; 
+ 
+    if (currentIndex < TOTAL_STATIONS) { 
+        gameScreen.style.display = "flex"; 
+        startEscapeTimer(); 
+        updateGame(); 
+    } else { 
+        showEndScreen(); 
+    } 
+} 
+ 
+function showEndScreen() { 
+    gameScreen.style.display = "none"; 
+    cameraScreen.style.display = "none"; 
+    success.style.display = "flex"; 
+ 
+    const finalScoreStr = scoreHome + " : " + scoreAway; 
+    document.getElementById("scoreDisplayFinal").textContent = finalScoreStr; 
+ 
+    let msg = ""; 
+    if (scoreHome > scoreAway) { 
+        msg = `🏆 Herzlichen Glückwunsch! ${currentTeamName} gewinnt das Match mit ${scoreHome}:${scoreAway} gegen den Gast! Stark gekämpft!`; 
+    } else if (scoreHome < scoreAway) { 
+        msg = `🏁 Schlusspfiff! Der Gast gewinnt mit ${scoreAway}:${scoreHome}. Nächstes Mal holt sich ${currentTeamName} den Sieg!`; 
+    } else { 
+        msg = `🤝 Unentschieden (${scoreHome}:${scoreAway})! Ein packendes Duell auf Augenhöhe zwischen ${currentTeamName} und dem Gast!`; 
+    } 
+    document.getElementById("finalMessage").textContent = msg; 
+} 
+ 
+againButton.addEventListener("click", () => { 
+    success.style.display = "none"; 
+    startScreen.style.display = "flex"; 
+    waypoints = []; 
+    currentIndex = 0; 
+    scoreHome = 0; 
+    scoreAway = 0; 
+    if (gpsWatchId !== null) { 
+        navigator.geolocation.clearWatch(gpsWatchId); 
+        gpsWatchId = null; 
+    } 
+}); 
+ 
+function calculateDistance(lat1, lon1, lat2, lon2) { 
+    const R = 6371e3; 
+    const φ1 = lat1 * Math.PI / 180; 
+    const φ2 = lat2 * Math.PI / 180; 
+    const Δφ = (lat2 - lat1) * Math.PI / 180; 
+    const Δλ = (lon2 - lon1) * Math.PI / 180; 
+ 
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + 
+              Math.cos(φ1) * Math.cos(φ2) * 
+              Math.sin(Δλ/2) * Math.sin(Δλ/2); 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+ 
+    return R * c; 
+} 
+ 
+function calculateBearing(lat1, lon1, lat2, lon2) { 
+    const φ1 = lat1 * Math.PI / 180; 
+    const φ2 = let = lat2 * Math.PI / 180; 
+    const φ2_fixed = lat2 * Math.PI / 180; 
+    const Δλ = (lon2 - lon1) * Math.PI / 180; 
+ 
+    const y = Math.sin(Δλ) * Math.cos(φ2_fixed); 
+    const x = Math.cos(φ1) * Math.sin(φ2_fixed) - 
+              Math.sin(φ1) * Math.cos(φ2_fixed) * Math.cos(Δλ); 
+    let θ = Math.atan2(y, x); 
+    θ = θ * 180 / Math.PI; 
+    return (θ + 360) % 360; 
+} 
+ 
+function normalize(deg) { 
+    return (deg + 540) % 360 - 180; 
+} 
+</script> 
+ 
+</body> 
 </html>
