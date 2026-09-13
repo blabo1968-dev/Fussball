@@ -243,6 +243,53 @@
                 opacity: 0; 
             } 
         } 
+
+        /* NEU: sichtbare TOR-Animation */
+        #goalMessage {
+            position: fixed;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.2);
+            z-index: 9999;
+            font-size: clamp(55px, 16vw, 110px);
+            font-weight: 900;
+            color: #ffffff;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            text-shadow:
+                0 0 10px #00ff66,
+                0 0 25px #00ff66,
+                0 0 50px #00ff66,
+                0 0 80px #ffffff;
+        }
+
+        #goalMessage.show {
+            animation: goalTextAnim 1.2s ease-out forwards;
+        }
+
+        @keyframes goalTextAnim {
+            0% {
+                transform: translate(-50%, -50%) scale(0.2);
+                opacity: 0;
+            }
+            20% {
+                transform: translate(-50%, -50%) scale(1.35);
+                opacity: 1;
+            }
+            45% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            75% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0;
+            }
+        }
  
         #cameraArrow { 
             font-size: 18px; 
@@ -370,6 +417,9 @@
         <h2>Blankenhagen Spieleentwicklung</h2> 
         <p>GPS Fußball-Challenge – Prototyp</p> 
     </header> 
+
+    <!-- NEU: TOR-Anzeige -->
+    <div id="goalMessage">⚽ TOR!</div>
  
     <div id="startScreen" class="screen"> 
         <h1 style="font-size: clamp(18px, 4vw, 22px); margin-bottom: 6px; color: #ffffff;">⚽ FUSSBALL-CHALLENGE 🥅</h1> 
@@ -650,6 +700,9 @@ const radar = document.getElementById("radar");
 const sweep = document.getElementById("sweep"); 
 const sweepGlow = document.getElementById("sweepGlow"); 
 const camera = document.getElementById("camera"); 
+
+/* NEU: Element für TOR-Anzeige */
+const goalMessage = document.getElementById("goalMessage");
  
 function generateTestWaypoints(userLat, userLon) { 
     waypoints = []; 
@@ -932,11 +985,18 @@ foundButton.addEventListener("click", () => {
     isShooting = true; 
     foundButton.disabled = true; 
  
+    /* TOR-ANIMATION + JUBEL */
     arObject.classList.add("shooting"); 
     playCheerSound(); 
+
+    /* Sichtbare große TOR-Anzeige */
+    goalMessage.classList.remove("show");
+    void goalMessage.offsetWidth;
+    goalMessage.classList.add("show");
  
     setTimeout(() => { 
         arObject.classList.remove("shooting"); 
+        goalMessage.classList.remove("show");
         scoreHome++; 
         updateScoreboardUI(); 
         isShooting = false; 
